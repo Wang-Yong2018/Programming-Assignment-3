@@ -1,40 +1,64 @@
+
+# find best hospital
+
 best <- function(state, outcome) {
-  ## Read outcome data
+  ## note: the code validates the state and outcome input at begining
   
-  df <- read.csv("data\\outcome-of-care-measures.csv", colClasses = "character")
-  outcome <- tolower(outcome)
+  # Check that if state are valid
   
-  ## Check that state and outcome are valid
-  if (sum(df$State == state) == 0) {
+  if (!any(df$State == state)) {
     stop("invalid state")
   }
   
-  if (!outcome %in% c("heart attack", "heart failure", "pneumonia")) {
-    stop('invalid outcome')
-  }  
-  ## Return hospital name in that state with lowest 30-day death
-  if (outcome == "heart attack"){
-    outcomeData = data$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack
-  }
-  if (outcome == "heart failure"){
-    outcomeData = data$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure
-  }
-  if (outcome == "pneumonia"){
-    outcomeData = data$Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia
-  }
-  sdata <- data.frame(data$State, data$Hospital.Name, as.numeric(outcomeData)) #must use as.numeric on `outcomeData` to prevent transferiing this into class `factor`
-  z <- subset(sdata, data$State == state)      # Gather rows with the desired state
-  ## rate
+  # Check if the outcome is valid
   
-  hname <- c()
-  for (i in 1:length(z)){
-    zz <- z[i] == min((z[,3]), na.rm = TRUE) #compate the oucome data to the minimum
+  ## predefine the related colname
+  
+  outcome_col_names = c(
+    "Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack",
+    "Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure",
+    "Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia"
+  )
+  
+  ## Using swtich to translate the outcome to specific column name
+  ## for those not in the switch cases, it is invalid.
+  outcome <- switch(EXPR=outcome,
+                    "heart attack" = outcome_col_names[1], 
+                    "heart failure"= outcome_col_names[2], 
+                    "pneumonia" = outcome_col_names[3],
+                    NA
+                    )
+  
+  if ( is.na(outcome )) {
+       stop("invalid outcome")
   }
   
-  result <- data.frame(z[,2], zz)
-  fresult <- subset(result, result[,2] == TRUE)
-  afresult <- fresult[order(fresult$z...2.),] #Alphabetize results data frame
+  ## Read outcome data from csv and load as data.frame
   
-  print(afresult[1,1])
-
+  df <- read.csv("data\\outcome-of-care-measures.csv")
+  
+  ## select the rows with state name and desired outcome type
+  interim_df <- df[df$State==state,c('State',"Hospital.Name",outcome)]
+  
+  # convert the outcome result as numeric and drop NA
+  interim_df[,outcome]<- as.numeric(interim_df[,outcome])
+  interim_df<- interim_df[!is.na(interim_df[outcome]),]
+  
+  # defined the sort order
+  sorted_cols_name <- c(outcome, "Hospital.Name")
+  
+  # sort
+  # best means lowest number.
+  
+  interim_df <- interim_df[ do.call("order", interim_df[sorted_cols_name]),]
+  
+  # return the best hospital
+  interim_df[1,"Hospital.Name"]
 }
+
+## testing
+print(" Test best function 1 pass =: ",best("TX", "heart attack") ==  "CYPRESS FAIRBANKS MEDICAL CENTER" )
+
+best("TX", "heart failure") ==  "FORT DUNCAN MEDICAL CENTER"
+
+best("MD", "heart attack") ==  "JOHNS HOPKINS HOSPITAL, THE"
