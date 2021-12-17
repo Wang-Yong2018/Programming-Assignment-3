@@ -1,7 +1,6 @@
-
-# find best hospital
-
-best <- function(state, outcome) {
+rankhospital <- function(state, outcome, num = "best") {
+  ## Read outcome data
+  ## Check that state and outcome are valid
   ## note: the code validates the state and outcome input at begining
   
   # Check that if state are valid
@@ -27,15 +26,19 @@ best <- function(state, outcome) {
                     "heart failure"= outcome_col_names[2], 
                     "pneumonia" = outcome_col_names[3],
                     NA
-                    )
+  )
   
   if ( is.na(outcome )) {
-       stop("invalid outcome")
+    stop("invalid outcome")
   }
   
   ## Read outcome data from csv and load as data.frame
   na_string = 'Not Available'
   df <- read.csv("data\\outcome-of-care-measures.csv",na.strings=na_string)
+  
+  
+  ## Return hospital name in that state with the given rank
+  ## 30-day death rate
   
   ## select the rows with state name and desired outcome type
   interim_df <- df[df$State==state,c('State',"Hospital.Name",outcome)]
@@ -49,30 +52,36 @@ best <- function(state, outcome) {
   
   # sort
   # best means lowest number.
-  
   interim_df <- interim_df[ do.call("order", interim_df[sorted_cols_name]),]
   
   # return the best hospital
-  interim_df[1,"Hospital.Name"]
+  
+  # Pre-define best_hospital as NA. 
+  best_hospital <- NA
+  
+  ## create the rank_vector
+  rank_vec <- rank(interim_df[[outcome]],na.last=FALSE, ties.method = "first")
+  
+  
+  if ( num  == 'best') {
+    best_hospital <- interim_df[rank_vec[rank_vec==min(rank_vec)],'Hospital.Name']
+    
+  }
+  
+  if (num == 'worst') {
+    best_hospital<- interim_df[rank_vec[rank_vec==max(rank_vec)],'Hospital.Name']
+  }
+  
+  if (num %in% rank_vec ) {
+    best_hospital<- interim_df[rank_vec[rank_vec==num],'Hospital.Name']
+  } 
+  
+  best_hospital
+  
 }
 
-## testing case 1,2,3,4,5
-## print( paste(
-##    "Best function test 1 pass =: ",
-##    best("TX", "heart attack") ==  "CYPRESS FAIRBANKS MEDICAL CENTER" 
-##    )
-##    )
 
-## print( paste(
-##  "Best function test 2 pass =: ",
-##  best("TX", "heart failure") ==  "FORT DUNCAN MEDICAL CENTER" 
-##  ) )
-
-
-## print( paste(
-##  "Best function test 3 pass =: ",
-##  best("MD", "heart attack") ==  "JOHNS HOPKINS HOSPITAL, THE" 
-##  )  )
-
-
-
+# testing for rankhospital 
+# print(rankhospital("TX", "heart failure", 4))
+# print(rankhospital("MD", "heart attack", "worst"))
+# print(rankhospital("MN", "heart attack", 5000))
